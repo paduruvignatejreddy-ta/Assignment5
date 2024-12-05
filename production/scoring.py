@@ -1,6 +1,6 @@
 """Processors for the model scoring/evaluation step of the worklow."""
 import os.path as op
-
+import mlflow
 from ta_lib.core.api import (get_dataframe,
                              get_feature_names_from_column_transformer,
                              get_package_path, hash_object, load_dataset,
@@ -38,3 +38,9 @@ def score_model(context, params):
 
     # store the predictions for any further processing.
     save_dataset(context, test_X, output_ds)
+
+    import io
+    buffer = io.StringIO()
+    test_X.to_csv(buffer, index=False)
+    buffer.seek(0)
+    mlflow.log_text(buffer.getvalue(), artifact_file="test_X.csv")

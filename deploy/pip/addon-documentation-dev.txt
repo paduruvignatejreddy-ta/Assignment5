@@ -1,4 +1,4 @@
-sphinx==4.5.0
+sphinx==5.0.0
 sphinxcontrib-napoleon==0.7
 nbsphinx==0.8.8
 jupyter_sphinx==0.4.0

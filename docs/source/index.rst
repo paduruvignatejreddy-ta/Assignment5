@@ -7,7 +7,7 @@ Welcome to Project_X documentation!
 ===================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 10
    :caption: Contents:
 
    project_overview

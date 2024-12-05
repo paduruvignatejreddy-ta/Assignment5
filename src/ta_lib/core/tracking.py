@@ -115,6 +115,8 @@ def start_experiment(context, expt_name=None, run_id=None, run_name=None, nested
             experiment_id=expt_id, run_id=run_id, run_name=run_name, nested=nested
         ) as _:
             # FIXME: return a custom tracker as has some api weirdness.
+            tracker.run_id = _.info.run_id
+            tracker.experiment_name = expt_name
 
             yield tracker
 

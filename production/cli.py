@@ -1,6 +1,8 @@
 import os
 import os.path as op
 from functools import partial
+import mlflow
+from ta_lib.core.tracking import start_experiment
 
 import click
 
@@ -79,40 +81,46 @@ def _run_job(cli_ctx, job_id, num_workers, num_threads_per_worker):
 
     proj_ctxt = cli_ctx.obj["project_context"]
     job_catalog = proj_ctxt.job_catalog
+    expt_name = "reg-mlflow"
+    with start_experiment(
+        cli_ctx.obj["project_context"],
+        expt_name=expt_name,
+        run_name=job_id,  # Pass the run_name
+        nested=True,
+    ) as tracker:
+        run_id = tracker.run_id
+        init_fn = None
+        if num_workers != 1:
+            init_fn = partial(load_job_processors, op.dirname(op.abspath(__file__)))
 
-    init_fn = None
-    if num_workers != 1:
-        init_fn = partial(load_job_processors, op.dirname(op.abspath(__file__)))
+        _completed = False
+        print("Main MLflow Run is started...")
+        for job_spec in job_catalog["jobs"]:
+            spec_job_id = job_spec["name"]
+            if (job_id != "all") and (spec_job_id != job_id):
+                continue
 
-    _completed = False
-    for job_spec in job_catalog["jobs"]:
-        spec_job_id = job_spec["name"]
-        if (job_id != "all") and (spec_job_id != job_id):
-            continue
-
-        # FIXME: if needed, add decorators for job_planners and task_runners
-        # and associate with job_id
-        planner = job_planner.create_job_plan
-        job_runner.main(
-            proj_ctxt,
-            planner,
-            job_spec,
-            init_fn=init_fn,
-            n_workers=num_workers,
-            n_threads_per_worker=num_threads_per_worker,
-        )
-        _completed = True
-
-    if not _completed:
-        print(
-            f"Invalid job-id : {job_id}. \n\n"
-            "Use list sub-command to see available tasks."
-        )
-        if not _completed:
-            print(
-                f"Invalid job-id : {job_id}. \n\n"
-                "Use list sub-command to see available tasks."
+            # FIXME: if needed, add decorators for job_planners and task_runners
+            # and associate with job_id
+            job_spec["__tracker_run_id"] = run_id
+            job_spec["__tracker_experiment_name"] = tracker.experiment_name
+            print("Child Run '{}' is started...".format(job_spec["name"]))
+            planner = job_planner.create_job_plan
+            job_runner.main(
+                proj_ctxt,
+                planner,
+                job_spec,
+                init_fn=init_fn,
+                n_workers=num_workers,
+                n_threads_per_worker=num_threads_per_worker,
             )
+            _completed = True
+
+            if not _completed:
+                print(
+                    f"Invalid job-id : {job_id}. \n\n"
+                    "Use list sub-command to see available tasks."
+                )
 
 
 # ------------------

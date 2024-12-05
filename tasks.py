@@ -968,6 +968,8 @@ def validate_env(
     final_package_diff = list(set(final_package_diff))
 
     if len(final_package_diff) > 0:
+        for i, j in expected_dict.items():
+            print(i, j, installed_dict.get(i, "No there"))
         print(f"Following packages are missing or have wrong versions {final_package_diff}")
     else:
         print("You are all good!")
