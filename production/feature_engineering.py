@@ -7,6 +7,7 @@ The trained pipeline and any artifacts are then saved to be used in
 training/scoring pipelines.
 """
 import logging
+import mlflow
 import os.path as op
 
 from category_encoders import TargetEncoder
@@ -17,7 +18,6 @@ from sklearn.pipeline import Pipeline
 from ta_lib.core.api import (
     get_dataframe,
     get_feature_names_from_column_transformer,
-    get_package_path,
     load_dataset,
     register_processor,
     save_pipeline,
@@ -35,6 +35,8 @@ def transform_features(context, params):
 
     input_features_ds = "train/sales/features"
     input_target_ds = "train/sales/target"
+    mlflow.log_param("Input Features dataset:", input_features_ds)
+    mlflow.log_param("Input Target dataset:", input_target_ds)
 
     artifacts_folder = DEFAULT_ARTIFACTS_PATH
 
@@ -100,7 +102,6 @@ def transform_features(context, params):
         sample_X = train_X
     sample_y = train_y.loc[sample_X.index]
 
-
     # Train the feature engg. pipeline prepared earlier. Note that the pipeline is
     # fitted on only the **training data** and not the full dataset.
     # This avoids leaking information about the test dataset when training the model.
@@ -144,3 +145,5 @@ def transform_features(context, params):
     save_pipeline(
         features_transformer, op.abspath(op.join(artifacts_folder, "features.joblib"))
     )
+    mlflow.log_artifact(op.abspath(op.join(artifacts_folder, "curated_columns.joblib")))
+    mlflow.log_artifact(op.abspath(op.join(artifacts_folder, "features.joblib")))

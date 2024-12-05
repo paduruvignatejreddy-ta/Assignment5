@@ -3,18 +3,21 @@
 The processors in this step, apply the various cleaning steps identified
 during EDA to create the training datasets.
 """
+
+import os
+import mlflow
 import numpy as np
-import pandas as pd
+from scripts import binned_selling_price
 from sklearn.model_selection import StratifiedShuffleSplit
+from ta_lib.core.api import DEFAULT_ARTIFACTS_PATH
 
 from ta_lib.core.api import (
     custom_train_test_split,
     load_dataset,
     register_processor,
     save_dataset,
-    string_cleaning
+    string_cleaning,
 )
-from scripts import binned_selling_price
 
 
 @register_processor("data-cleaning", "product")
@@ -28,6 +31,8 @@ def clean_product_table(context, params):
 
     input_dataset = "raw/product"
     output_dataset = "cleaned/product"
+    mlflow.log_param("Products inp data path:", input_dataset)
+    mlflow.log_param("Products opt dataset path:", output_dataset)
 
     # load dataset
     product_df = load_dataset(context, input_dataset)
@@ -66,10 +71,11 @@ def clean_order_table(context, params):
 
     input_dataset = "raw/orders"
     output_dataset = "cleaned/orders"
+    mlflow.log_param("Orders inp dataset path:", input_dataset)
+    mlflow.log_param("Orders opt dataset path:", output_dataset)
 
     # load dataset
     orders_df = load_dataset(context, input_dataset)
-
 
     # list of columns that we want string cleaning op to be performed on.
     str_cols = list(
@@ -103,6 +109,9 @@ def clean_sales_table(context, params):
     input_product_ds = "cleaned/product"
     input_orders_ds = "cleaned/orders"
     output_dataset = "cleaned/sales"
+    mlflow.log_param("Product sales inp ds path:", input_product_ds)
+    mlflow.log_param("Order sales inp ds path:", input_orders_ds)
+    mlflow.log_param("cleaned sales opt ds path:", output_dataset)
 
     # load datasets
     product_df = load_dataset(context, input_product_ds)
@@ -123,7 +132,12 @@ def create_training_datasets(context, params):
     output_train_target = "train/sales/target"
     output_test_features = "test/sales/features"
     output_test_target = "test/sales/target"
-    
+    mlflow.log_param("Input dataset path for cleaned sales:", input_dataset)
+    mlflow.log_param("Train features output path:", output_train_features)
+    mlflow.log_param("Train target output path:", output_train_target)
+    mlflow.log_param("Test features output path:", output_test_features)
+    mlflow.log_param("Test target output path:", output_test_target)
+
     # load dataset
     sales_df_processed = load_dataset(context, input_dataset)
 
@@ -175,7 +189,10 @@ def create_training_datasets(context, params):
         # split the dataset to train and test
         .get_features_targets(target_column_names=target_col)
     )
-
+    artifacts_folder = DEFAULT_ARTIFACTS_PATH
     # save the datasets
     save_dataset(context, test_X, output_test_features)
     save_dataset(context, test_y, output_test_target)
+    mlflow.log_artifact(os.path.abspath(os.path.join(artifacts_folder, "../data/cleaned")))
+    mlflow.log_artifact(os.path.abspath(os.path.join(artifacts_folder, "../data/train")))
+    mlflow.log_artifact(os.path.abspath(os.path.join(artifacts_folder, "../data/test")))
