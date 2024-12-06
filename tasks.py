@@ -416,9 +416,9 @@ def setup_env_pyspark(c, platform=PLATFORM, env=DEV_ENV, force=False, python_ver
     # print(f"env_name is {env_name} \n env_file is {env_file}")  # TODO: Delete this
 
     _setup_env_common(c, env_name, platform=platform, env=env, force=force, python_version=python_version)
-    
+
     with py_env(c, env_name):
-        
+
         c.run(
             f"""pip install -r "{usecase_file}" """
         )
@@ -440,8 +440,8 @@ def _addon_file_paths(platform, env, addon_list):
         else:
             raise FileNotFoundError(f"""The file for {addon} doesn't exist in "{PIP_REQ_FOLDER}" folder""")
 
-
     return addon_file_list
+
 
 def _addon_update_env(c, addon_file, env_name):
     with py_env(c, env_name):
@@ -1134,6 +1134,25 @@ _create_task_collection(
     start_ipython_shell,
 )
 
+
+@task(name="radon_cc")
+def complexity(c):
+    """
+    Calculate the complexity score of the codebase using radon.
+    """
+    # Define the directories to analyze
+    directories = HERE
+
+    # Run radon analysis
+    print("Running Radon to calculate complexity scores...")
+    result = c.run(f"radon cc {directories} -s --total-average", pty=True)
+    print(result.stdout)
+
+
+_create_task_collection(
+    "radon",
+    complexity
+)
 
 # --------------
 # Root namespace
