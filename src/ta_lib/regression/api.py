@@ -7,3 +7,4 @@ regression problems.
 from .estimators import *
 from .evaluation import *
 from .._ext_lib import mape, wmape, root_mean_squared_error
+from .custom_transformer import *
