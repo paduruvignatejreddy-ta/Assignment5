@@ -42,3 +42,26 @@ jobs:
         tasks:
           - name: "score-model"
             params: {}
+  - name: optuna
+    stages:
+      - name: "optuna-optimization"
+        tasks:
+          - name: "train-model-optuna"
+            params:
+              model_type: "RandomForestRegressor"  # Specify which model to optimize
+              hyperparameters:
+                n_estimators:
+                  type: int
+                  range: [10, 200]  # Define the search space for n_estimators
+                max_depth:
+                  type: int
+                  range: [1, 32]   # Define the search space for max_depth
+                min_samples_split:
+                  type: int
+                  range: [2, 20]   # Define the search space for min_samples_split
+                min_samples_leaf:
+                  type: int
+                  range: [1, 20]   # Define the search space for min_samples_leaf
+                random_state: 42  # Use a fixed random state for reproducibility
+              n_trials: 1   # Number of trials for the Optuna optimization
+              objective_metric: "score"  # Metric to optimize (e.g., R^2 score)

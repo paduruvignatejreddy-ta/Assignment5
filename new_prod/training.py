@@ -15,6 +15,7 @@ from ta_lib.core.api import (
     save_pipeline,
 )
 from ta_lib.regression.api import SKLStatsmodelOLS
+import joblib
 
 logger = logging.getLogger(__name__)
 
@@ -51,13 +52,16 @@ def train_model(context, params):
     )
     train_X = train_X[curated_columns]
 
-    # create training pipeline
-    reg_ppln_ols = Pipeline([("estimator", SKLStatsmodelOLS())])
+    model_path = op.join(artifacts_folder, "random_forest_model.joblib")
+    model = joblib.load(model_path)
 
-    # fit the training pipeline
+    # # create training pipeline
+    reg_ppln_ols = Pipeline([("estimator", model)])
+
+    # # fit the training pipeline
     reg_ppln_ols.fit(train_X, train_y.values.ravel())
 
-    # save fitted training pipeline
+    # # save fitted training pipeline
     save_pipeline(
         reg_ppln_ols, op.abspath(op.join(artifacts_folder, "train_pipeline.joblib"))
     )
