@@ -35,13 +35,11 @@ def objective(trial, train_X, train_y):
         The R^2 score of the trained RandomForestRegressor model on the training data.
     """
     with mlflow.start_run(nested=True):
-        # Suggest hyperparameters for RandomForestRegressor
         n_estimators = trial.suggest_int("n_estimators", 10, 200)
         max_depth = trial.suggest_int("max_depth", 1, 32)
         min_samples_split = trial.suggest_int("min_samples_split", 2, 20)
         min_samples_leaf = trial.suggest_int("min_samples_leaf", 1, 20)
 
-        # Initialize the RandomForestRegressor model
         model = RandomForestRegressor(
             n_estimators=n_estimators,
             max_depth=max_depth,
@@ -50,17 +48,10 @@ def objective(trial, train_X, train_y):
             random_state=42
         )
 
-        # Fit the model
         model.fit(train_X, train_y.values.ravel())
-
-        # Evaluate the model using R^2 score
         score = model.score(train_X, train_y)
-
-        # Log parameters and score to MLflow (without starting/ending a run)
         mlflow.log_params(trial.params)
         mlflow.log_metric("score", score)
-
-        # Return the score for Optuna to optimize
     return score
 
 
@@ -81,35 +72,19 @@ def optimization(context):
         The trained RandomForestRegressor model with the best hyperparameters found during optimization.
     """
     artifacts_folder = DEFAULT_ARTIFACTS_PATH
-
-    # Load training datasets
     input_features_ds = "train/housing/features"
     input_target_ds = "train/housing/target"
-
-    # Load datasets into training features (X) and target (y)
     train_X = load_dataset(context, input_features_ds)
     train_y = load_dataset(context, input_target_ds)
-
-    # Load pre-trained feature transformer pipeline
     features_transformer = load_pipeline(op.join(artifacts_folder, "features.joblib"))
-
-    # Transform the training features using the pipeline
     train_X_transformed = get_dataframe(
         features_transformer.fit_transform(train_X, train_y),
         get_feature_names_from_column_transformer(features_transformer),
     )
-
-    # Initialize Optuna study
     study = optuna.create_study(direction="minimize")
-
-    # Run the Optuna optimization for 100 trials (or set the number as needed)
     study.optimize(lambda trial: objective(trial, train_X_transformed, train_y), n_trials=10)
-
-    # Get the best trial after optimization
     best_trial = study.best_trial
     logger.info(f"Best hyperparameters: {best_trial.params}")
-
-    # Train the final model with the best hyperparameters
     best_model = RandomForestRegressor(
         n_estimators=best_trial.params["n_estimators"],
         max_depth=best_trial.params["max_depth"],
@@ -117,23 +92,14 @@ def optimization(context):
         min_samples_leaf=best_trial.params["min_samples_leaf"],
         random_state=42
     )
-
-    # Fit the model
     best_model.fit(train_X_transformed, train_y.values.ravel())
-
-    # Save the trained model
     model_filename = op.join(artifacts_folder, "random_forest_model.joblib")
     save_pipeline(best_model, model_filename)
 
     with mlflow.start_run(nested=True):
-        # Log the best hyperparameters and the best score to MLflow (still keeping logging without starting a new run)
         mlflow.log_params(best_trial.params)
         mlflow.log_metric("best_score", best_trial.value)
-
-        # Log the final model as an artifact in MLflow (optional)
         mlflow.log_artifact(model_filename)
-
-    # Return the trained model
     return best_model
 
 
@@ -144,25 +110,14 @@ def train_model(context, params):
 
     input_features_ds = "train/housing/features"
     input_target_ds = "train/housing/target"
-
-    # Load training datasets
     train_X = load_dataset(context, input_features_ds)
     train_y = load_dataset(context, input_target_ds)
 
-    # Load pre-trained feature transformer pipeline
     features_transformer = load_pipeline(op.join(artifacts_folder, "features.joblib"))
-
-    # Transform the training features using the pipeline
     train_X_transformed = get_dataframe(  # noqa: F841
         features_transformer.fit_transform(train_X, train_y.values.ravel()),
         get_feature_names_from_column_transformer(features_transformer),
     )
-
-    # Run the optimization (Hyperparameter tuning using Optuna)
     best_model = optimization(context)
-
-    # Optionally log or use the best model returned by the optimization
     logger.info(f"Best model parameters: {best_model.get_params()}")
-
-    # Return the best trained model
     return best_model
